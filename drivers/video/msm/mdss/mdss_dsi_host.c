@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2313,7 +2314,12 @@ void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
 	intr |= DSI_INTR_ERROR;
 	MIPI_OUTP(ctrl->ctrl_base + 0x0110, intr);
 
+#if defined(UNISCOPE_DRIVER_QC8909)
+	dsi_send_events(ctrl, DSI_EV_DSI_FIFO_EMPTY, 0); //liguowei@uni_drv 20150529 the kernel will be reboot when no LCD panel inserted
+#else
 	dsi_send_events(ctrl, DSI_EV_MDP_BUSY_RELEASE, 0);
+#endif
+
 }
 
 irqreturn_t mdss_dsi_isr(int irq, void *ptr)

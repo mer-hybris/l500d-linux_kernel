@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -552,6 +553,9 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	 * for the backlight brightness. If the brightness is less
 	 * than it, the controller can malfunction.
 	 */
+        #if defined FT5X06_TPD_PROXIMITY || defined(UNISCOPE_DRIVER_L310) || defined(UNISCOPE_DRIVER_L311)//liguowei@uni_drv 20150430 L301_WLD LCD blank when calling
+        mdelay(50);
+        #endif
 
 	if ((bl_level < pdata->panel_info.bl_min) && (bl_level != 0))
 		bl_level = pdata->panel_info.bl_min;
@@ -1293,6 +1297,27 @@ static void mdss_dsi_parse_dfps_config(struct device_node *pan_node,
 	return;
 }
 
+/* Added by JZZ(zhizhang)@uniscope_drv 20140918 begin */
+#if defined(UNISCOPE_DRIVER_TP_AUTOMATCH_RESOLUTION)
+u32 display_coords_x_max=0;
+u32 display_coords_y_max=0;
+void set_mdss_dsi_panel_resolution(u32 x, u32 y)
+{
+	pr_err("%s: set display_coords_x_max %d,display_coords_y_max %d.\n",
+		__func__,x,y);
+	display_coords_x_max = x;
+	display_coords_y_max = y;
+}
+void get_mdss_dsi_panel_resolution(u32 *x, u32 *y)
+{
+	pr_err("%s: get display_coords_x_max %d,display_coords_y_max %d.\n",
+		__func__,display_coords_x_max,display_coords_y_max);
+	*x = display_coords_x_max;
+	*y = display_coords_y_max;
+}
+#endif
+/* Added by JZZ(zhizhang)@uniscope_drv 20140918 end */
+
 static int mdss_panel_parse_dt(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
@@ -1318,6 +1343,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	}
 	pinfo->yres = (!rc ? tmp : 480);
 
+	/* Added by JZZ(zhizhang)@uniscope_drv 20140918 */
+#if defined(UNISCOPE_DRIVER_TP_AUTOMATCH_RESOLUTION)
+	set_mdss_dsi_panel_resolution(pinfo->xres,pinfo->yres);
+#endif
 	rc = of_property_read_u32(np,
 		"qcom,mdss-pan-physical-width-dimension", &tmp);
 	pinfo->physical_width = (!rc ? tmp : 0);
