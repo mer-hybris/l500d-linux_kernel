@@ -612,7 +612,12 @@ CONFIG_MSG2XXX_TOUCHPANEL_DRV_SELF_FW_CONTROL=y
 CONFIG_FHANDLE=y
 # Failed to load firmware without this flag (adjust mer-kernel-check!)
 #CONFIG_FW_LOADER_USER_HELPER=n
-CONFIG_ANDROID_PARANOID_NETWORK=n
+
+# Android init fails/system freezes without this flag (adjust mer-kernel-check!)
+# WARNING! Not a permanent solution, because elementary network commands such
+# as ping fail with "socket: Permission denied"
+#CONFIG_ANDROID_PARANOID_NETWORK=n
+
 CONFIG_DEVTMPFS=y
 CONFIG_NLS_UTF8=y
 CONFIG_AUTOFS4_FS=y
