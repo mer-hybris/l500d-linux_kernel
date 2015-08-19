@@ -610,7 +610,8 @@ CONFIG_MSG2XXX_TOUCHPANEL_DRV_SELF_FW_CONTROL=y
 #zhangbing@uniscope drv 20150515 add mstar end
 
 CONFIG_FHANDLE=y
-CONFIG_FW_LOADER_USER_HELPER=n
+# Failed to load firmware without this flag (adjust mer-kernel-check!)
+#CONFIG_FW_LOADER_USER_HELPER=n
 CONFIG_ANDROID_PARANOID_NETWORK=n
 CONFIG_DEVTMPFS=y
 CONFIG_NLS_UTF8=y
