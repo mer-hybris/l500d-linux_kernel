@@ -797,7 +797,16 @@ config SENSORS_QMC7983
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called qmc7983.
-	  
+
+config QPNP_VIBRA_FFMEMLESS
+	tristate "Qualcomm Plug'n'play PMIC ffmemless vibrator driver"
+	depends on SPMI && !QPNP_VIBRATOR
+	select INPUT_FF_MEMLESS
+	default n
+	help
+	  Say Y here if you want to enable Qualcomm Plug'n'play PMIC ffmemless
+	  vibrator driver.
+
 config SENSORS_STK3X1X
 	tristate "STK3X1X device driver"
 	depends on I2C
