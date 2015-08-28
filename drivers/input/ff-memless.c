@@ -41,7 +41,7 @@ MODULE_DESCRIPTION("Force feedback support for memoryless devices");
 #define FF_MEMLESS_EFFECTS	64
 
 /* Envelope update interval in ms */
-static int ff_envelope_interval = 50;
+static int ff_envelope_interval = 10;
 module_param(ff_envelope_interval, int, S_IWUSR | S_IRUGO);
 
 #define FF_EFFECT_STARTED	0
