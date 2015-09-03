@@ -56,7 +56,7 @@
 #define _ZONE ZONE_NORMAL
 #endif
 
-#define MAX_SWAP_COMMIT 70
+#define MAX_SWAP_COMMIT 100
 
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
@@ -372,14 +372,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
-	int other_free;
-	int other_file;
-	unsigned long nr_to_scan = sc->nr_to_scan;
-
-@@ -186,20 +188,23 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
-        int array_size = ARRAY_SIZE(lowmem_adj);
         int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
         int other_file;
+	unsigned long nr_to_scan = sc->nr_to_scan;
         struct sysinfo si;
         int relative_freeswap;
 
