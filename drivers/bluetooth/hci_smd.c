@@ -171,6 +171,7 @@ static void hci_smd_recv_data(void)
 	if (len > HCI_MAX_FRAME_SIZE) {
 		BT_ERR("Frame larger than the allowed size, flushing frame");
 		smd_read(hsmd->data_channel, NULL, len);
+		hsmd->hdev->stat.err_rx++;
 		goto out_data;
 	}
 
@@ -181,12 +182,14 @@ static void hci_smd_recv_data(void)
 	if (!skb) {
 		BT_ERR("Error in allocating socket buffer");
 		smd_read(hsmd->data_channel, NULL, len);
+		hsmd->hdev->stat.err_rx++;
 		goto out_data;
 	}
 
 	rc = smd_read(hsmd->data_channel, skb_put(skb, len), len);
 	if (rc < len) {
 		BT_ERR("Error in reading from the channel");
+		hsmd->hdev->stat.err_rx++;
 		goto out_data;
 	}
 
@@ -202,8 +205,11 @@ static void hci_smd_recv_data(void)
 		 * to null to avoid multiple access
 		 */
 		skb = NULL;
+		hsmd->hdev->stat.err_rx++;
 		goto out_data;
 	}
+
+	hsmd->hdev->stat.byte_rx += len;
 
 	/*
 	 * Start the timer to monitor whether the Rx queue is
@@ -231,6 +237,7 @@ static void hci_smd_recv_event(void)
 	if (len > HCI_MAX_FRAME_SIZE) {
 		BT_ERR("Frame larger than the allowed size, flushing frame");
 		rc = smd_read(hsmd->event_channel, NULL, len);
+		hsmd->hdev->stat.err_rx++;
 		goto out_event;
 	}
 
@@ -239,12 +246,14 @@ static void hci_smd_recv_event(void)
 		if (!skb) {
 			BT_ERR("Error in allocating socket buffer");
 			smd_read(hsmd->event_channel, NULL, len);
+			hsmd->hdev->stat.err_rx++;
 			goto out_event;
 		}
 
 		rc = smd_read(hsmd->event_channel, skb_put(skb, len), len);
 		if (rc < len) {
 			BT_ERR("Error in reading from the event channel");
+			hsmd->hdev->stat.err_rx++;
 			goto out_event;
 		}
 
@@ -261,8 +270,11 @@ static void hci_smd_recv_event(void)
 			 *  to null to avoid multiple access
 			 */
 			skb = NULL;
+			hsmd->hdev->stat.err_rx++;
 			goto out_event;
 		}
+
+		hsmd->hdev->stat.byte_rx += len;
 
 		len = smd_read_avail(hsmd->event_channel);
 		/*
@@ -281,6 +293,7 @@ out_event:
 
 static int hci_smd_send_frame(struct sk_buff *skb)
 {
+	struct hci_dev *hdev = (struct hci_dev *) skb->dev;
 	int len;
 	int avail;
 	int ret = 0;
@@ -298,6 +311,11 @@ static int hci_smd_send_frame(struct sk_buff *skb)
 			BT_ERR("Failed to write Command %d", len);
 			ret = -ENODEV;
 		}
+		if (!ret) {
+			hdev->stat.cmd_tx++;
+			hdev->stat.byte_tx += skb->len;
+		} else
+			hdev->stat.err_tx++;
 		break;
 	case HCI_ACLDATA_PKT:
 	case HCI_SCODATA_PKT:
@@ -310,6 +328,15 @@ static int hci_smd_send_frame(struct sk_buff *skb)
 		if (len < skb->len) {
 			BT_ERR("Failed to write Data %d", len);
 			ret = -ENODEV;
+		}
+		if (!ret) {
+			if (bt_cb(skb)->pkt_type == HCI_ACLDATA_PKT)
+				hdev->stat.acl_tx++;
+			else
+				hdev->stat.sco_tx++;
+			hdev->stat.byte_tx += skb->len;
+		} else {
+			hdev->stat.err_tx++;
 		}
 		break;
 	default:
