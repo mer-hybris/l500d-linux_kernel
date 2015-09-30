@@ -1250,7 +1250,7 @@ static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd)
 	u32 offset;
 	int bpp;
 	struct mdss_panel_info *panel_info;
-	static bool splash_done;
+	static bool splash_done=true;   //zhangbing@drv 20150916 initialize the splash_done value true 
 	struct mdss_panel_data *panel;
 
 	int rc;

@@ -176,8 +176,8 @@
 			reset-gpios = <&msm_gpio 12 0x00>;
 			interrupt-gpios = <&msm_gpio 13 0x00>;
 			avdd-supply =<&tp_power>;
-			goodix,panel-coords = <0 0 480 800>;
-			goodix,display-coords = <0 0 530 840>;
+			goodix,panel-coords = <0 0 480 854>;
+			goodix,display-coords = <0 0 480 854>;
 			goodix,button-map= <158 102 139>;
 			goodix,product-id = "915";
 			goodix,cfg-data0 = [
@@ -393,7 +393,7 @@
 		pinctrl-0 = <&gpio_led_off>;
 
 		keypad-backlight {
-			gpios = <&msm_gpio 110 0>;//kangyan test backlight 36--110
+			gpios = <&msm_gpio 36 0>;
 			label = "button-backlight";
 			linux,default-trigger = "none";
 		};
@@ -875,6 +875,36 @@
 };
 /*zhangbing@uniscope_drv 20150619 add L511 LCD ili9806e fwvga end*/
 
+/*zhangbing@uniscope_drv 20150906 add L510 LCD nt35521 720p begin*/
+#include "dsi-panel-nt35521-720p-dj-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_nt35521_720p_dj_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720p_dj_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/*zhangbing@uniscope_drv 20150906 add L510 LCD nt35521 720p end*/
+
 &pm8909_vadc {
 	chan@30 {
 		qcom,scale-function = <13>;
@@ -891,7 +921,7 @@
 &pm8909_chg {
 	qcom,vddmax-mv = <4350>;
 	qcom,vddsafe-mv = <4380>;
-	qcom,vinmin-mv = <4330>; /* uni@fantian for charger 20150715 */
+	qcom,vinmin-mv = <4390>; /* uni@fantian for charger 20150715 */
 	qcom,batt-hot-percentage = <25>;
 	qcom,batt-cold-percentage = <80>;
 	qcom,tchg-mins = <360>;
@@ -904,7 +934,7 @@
 		qcom,rpull-up-kohm = <0>;
 		qcom,vref-batt-therm = <1800000>;
 
-		#include "batterydata-qrd-skue-4v35-2000mah.dtsi"
+		#include "batterydata-uni-L500C-4v35-2100mah.dtsi"
 	};
 };
 

@@ -703,6 +703,7 @@ static int32_t stk3x1x_enable_ps(struct stk3x1x_data *ps_data, uint8_t enable)
 			__func__, ret);
 		return ret;
 	}
+
 	if (enable) {
 #ifdef STK_POLL_PS
 		hrtimer_start(&ps_data->ps_timer, ps_data->ps_poll_delay,
