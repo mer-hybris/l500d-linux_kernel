@@ -1209,7 +1209,7 @@
 		
 		/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control begin */
 		gpio_led_pins {
-			qcom,pins = <&gp 110>;  //kangyan test 36--110
+			qcom,pins = <&gp 36>;
 			qcom,num-grp-pins = <1>;
 			label = "gpio-led-pins";
 			gpio_led_off: led_off {

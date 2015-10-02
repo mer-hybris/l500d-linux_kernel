@@ -45,13 +45,13 @@
  */
 #include <linux/regulator/consumer.h>
 #include "gt9xx.h"
-  
+
 #include <linux/of_gpio.h>
 
 #include <linux/input/mt.h>
-#include <linux/input/gen_vkeys.h>    
+#include <linux/input/gen_vkeys.h>
 #define FEATURE_QRD8X26_UNI_DRV
-    
+
 #define GOODIX_DEV_NAME	"Goodix-CTP"
 #define CFG_MAX_TOUCH_POINTS	5
 #define GOODIX_COORDS_ARR_SIZE	4

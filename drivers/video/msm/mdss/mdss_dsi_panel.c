@@ -55,6 +55,7 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	int ret;
 	u32 duty;
 	u32 period_ns;
+	static int delay_flag=0;
 
 	if (ctrl->pwm_bl == NULL) {
 		pr_err("%s: no PWM\n", __func__);
@@ -71,8 +72,14 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 			pwm_disable(ctrl->pwm_bl);
 		}
 		ctrl->pwm_enabled = 0;
+		delay_flag=1;
 		return;
 	}
+	#if defined(UNISCOPE_DRIVER_LCD_WAKEUP_DELAY)
+		if(delay_flag)
+			mdelay(20);
+		delay_flag=0;
+	#endif
 
 	duty = level * ctrl->pwm_period;
 	duty /= ctrl->bklt_max;
@@ -553,10 +560,6 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	 * for the backlight brightness. If the brightness is less
 	 * than it, the controller can malfunction.
 	 */
-        #if defined FT5X06_TPD_PROXIMITY || defined(UNISCOPE_DRIVER_L310) || defined(UNISCOPE_DRIVER_L311)//liguowei@uni_drv 20150430 L301_WLD LCD blank when calling
-        mdelay(50);
-        #endif
-
 	if ((bl_level < pdata->panel_info.bl_min) && (bl_level != 0))
 		bl_level = pdata->panel_info.bl_min;
 
