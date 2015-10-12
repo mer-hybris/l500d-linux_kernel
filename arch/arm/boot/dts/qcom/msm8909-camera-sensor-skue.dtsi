@@ -30,7 +30,7 @@
 		status = "okay";
 		pinctrl-names = "flash_default";
 		pinctrl-0 = <&SL610W1D_default>;
-		qcom,flash-en = <&msm_gpio 22 0>; //chenqiang@uni_drv L510 add flashlight GPIO22
+		qcom,flash-en = <&msm_gpio 31 0>; //kangyan@uni_drv 20151008 L510 modify use true flashlight GPIO31//GPIO22
 		qcom,flash-now = <&msm_gpio 32 0>; //liguowei@uni_drv L310 add flashlight GPIO31 and GPIO32
 		qcom,op-seq = "flash_en", "flash_now";
 		qcom,torch-seq-val = <1 0>;
