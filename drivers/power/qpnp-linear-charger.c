@@ -27,6 +27,18 @@
 #include <linux/leds.h>
 #include <linux/debugfs.h>
 
+#define BATTERY_DESIGN_PROP
+#define L500D_BATTERY
+
+/* Battery specific properties */
+#ifdef BATTERY_DESIGN_PROP
+
+#ifdef L500D_BATTERY
+#include "l500d_battery.h"
+#endif /* L500D_BATTERY */
+
+#endif /* BATTERY_DESIGN_PROP */
+
 #define CREATE_MASK(NUM_BITS, POS) \
 	((unsigned char) (((1 << (NUM_BITS)) - 1) << (POS)))
 #define LBC_MASK(MSB_BIT, LSB_BIT) \
@@ -1597,10 +1609,18 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 		val->intval = get_prop_batt_present(chip);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
+#ifdef BATTERY_DESIGN_PROP
+		val->intval = BATTERY_VOLTAGE_MAX_DESIGN;
+#else
 		val->intval = chip->cfg_max_voltage_mv * 1000;
+#endif /*BATTERY_DESIGN_PROP*/
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
+#ifdef BATTERY_DESIGN_PROP
+		val->intval = BATTERY_VOLTAGE_MIN_DESIGN;
+#else
 		val->intval = chip->cfg_min_voltage_mv * 1000;
+#endif /*BATTERY_DESIGN_PROP*/
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = get_prop_battery_voltage_now(chip);
