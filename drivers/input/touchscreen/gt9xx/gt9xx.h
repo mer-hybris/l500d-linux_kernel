@@ -99,6 +99,15 @@ struct goodix_ts_data {
 	u8  esd_running;
 	u8  fw_error;
 	bool power_on;
+
+	/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) begin*/
+	struct pinctrl *ts_pinctrl;
+#ifdef UNISCOPE_DRIVER_QC8909
+	struct pinctrl_state *pinctrl_state_active;
+	struct pinctrl_state *pinctrl_state_suspend;
+	struct pinctrl_state *pinctrl_state_release;
+#endif
+	/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) end*/
 	struct mutex lock;
 	struct regulator *avdd;
 	struct regulator *vdd;
@@ -121,20 +130,27 @@ extern struct i2c_client  *i2c_connect_client;
 #define GTP_HAVE_TOUCH_KEY		1
 
 /* auto updated by .bin file as default */
-#define GTP_AUTO_UPDATE			1
+#define GTP_AUTO_UPDATE			0
 /* auto updated by head_fw_array in gt9xx_firmware.h,
  * function together with GTP_AUTO_UPDATE */
-#define GTP_HEADER_FW_UPDATE	0 
+#define GTP_HEADER_FW_UPDATE	0
 #define GTP_COMPATIBLE_MODE          0
 #define GTP_AUTO_UPDATE_CFG          0
 #define GTP_CREATE_WR_NODE		1
 #define GTP_ESD_PROTECT			0
 #define GTP_WITH_PEN			0
 
+#ifdef UNISCOPE_DRIVER_GT9157_DBL_CLK_WAKEUP
+/* This cannot work when enable-power-off is on */
+#define GTP_SLIDE_WAKEUP		1
+/* double-click wakeup, function together with GTP_SLIDE_WAKEUP */
+#define GTP_DBL_CLK_WAKEUP	1
+#else
 /* This cannot work when enable-power-off is on */
 #define GTP_SLIDE_WAKEUP		0
 /* double-click wakeup, function together with GTP_SLIDE_WAKEUP */
-#define GTP_DBL_CLK_WAKEUP		0
+#define GTP_DBL_CLK_WAKEUP	0
+#endif
 
 #define GTP_DEBUG_ON			0
 #define GTP_DEBUG_ARRAY_ON		0
@@ -157,7 +173,7 @@ extern struct i2c_client  *i2c_connect_client;
 				IRQ_TYPE_EDGE_FALLING,\
 				IRQ_TYPE_LEVEL_LOW,\
 				IRQ_TYPE_LEVEL_HIGH\
-		 		}
+				}
 
 /* STEP_3(optional): Specify your special config info if needed */
 #define GTP_IRQ_TAB_RISING	0
@@ -195,7 +211,7 @@ extern struct i2c_client  *i2c_connect_client;
 #define GTP_REG_MAIN_CLK                0x8020
 #define GTP_REG_CHIP_TYPE               0x8000
 #define GTP_REG_HAVE_KEY                0x804E
-#define GTP_REG_MATRIX_DRVNUM           0x8069     
+#define GTP_REG_MATRIX_DRVNUM           0x8069
 #define GTP_REG_MATRIX_SENNUM           0x806A
 
 #define GTP_FL_FW_BURN              0x00

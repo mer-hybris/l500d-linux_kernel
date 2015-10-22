@@ -98,7 +98,13 @@ static const char *const key_names[] = {
 };
 #endif
 #endif
-
+/*zhangbing@uniscope_drv 20151013 TP gt9157 interrupt voltage abnormal(lower than normal) begin*/
+#ifdef UNISCOPE_DRIVER_QC8909
+#define PINCTRL_STATE_ACTIVE		"pmx_ts_active"
+#define PINCTRL_STATE_SUSPEND		"pmx_ts_suspend"
+#define PINCTRL_STATE_RELEASE		"pmx_ts_release"
+#endif
+/*zhangbing@uniscope_drv 20151013 TP gt9157 interrupt voltage abnormal(lower than normal) end*/
 static void gtp_int_sync(struct goodix_ts_data *ts, int ms);
 static int gtp_i2c_test(struct i2c_client *client);
 static int goodix_power_off(struct goodix_ts_data *ts);
@@ -120,12 +126,12 @@ static int gtp_init_ext_watchdog(struct i2c_client *client);
 #endif
 
 #if GTP_SLIDE_WAKEUP
-enum doze_status {
+typedef enum doze_status {          //zhangbing@uniscope_drv 20151013 modify
 	DOZE_DISABLED = 0,
 	DOZE_ENABLED = 1,
 	DOZE_WAKEUP = 2,
-};
-static enum doze_status = DOZE_DISABLED;
+}DOZE_T;
+static DOZE_T doze_status = DOZE_DISABLED;    //zhangbing@uniscope_drv 20151013 modify
 static s8 gtp_enter_doze(struct goodix_ts_data *ts);
 #endif
 bool init_done;
@@ -319,6 +325,9 @@ void gtp_irq_disable(struct goodix_ts_data *ts)
 	spin_lock_irqsave(&ts->irq_lock, irqflags);
 	if (!ts->irq_is_disabled) {
 		ts->irq_is_disabled = true;
+#if GTP_DBL_CLK_WAKEUP
+		disable_irq_wake(ts->client->irq);               //zhangbing@uniscope_drv 20151013 add in case of the TP cannot wakeup in deep sleep
+#endif
 		disable_irq_nosync(ts->client->irq);
 	}
 	spin_unlock_irqrestore(&ts->irq_lock, irqflags);
@@ -339,6 +348,9 @@ void gtp_irq_enable(struct goodix_ts_data *ts)
 	spin_lock_irqsave(&ts->irq_lock, irqflags);
 	if (ts->irq_is_disabled) {
 		enable_irq(ts->client->irq);
+#if GTP_DBL_CLK_WAKEUP
+		enable_irq_wake(ts->client->irq);    //zhangbing@uniscope_drv 20151013 add in case of the TP cannot wakeup in deep sleep
+#endif
 		ts->irq_is_disabled = false;
 	}
 	spin_unlock_irqrestore(&ts->irq_lock, irqflags);
@@ -368,7 +380,7 @@ static void gtp_touch_down(struct goodix_ts_data *ts, int id, int x, int y,
 	input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
 	input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, w);
 	input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, w);
-} 
+}
 
 /*******************************************************
 Function:
@@ -468,6 +480,8 @@ static void goodix_ts_work_func(struct work_struct *work)
 				doze_buf[2] = 0x00;
 				gtp_i2c_write(ts->client, doze_buf, 3);
 			} else {
+				doze_buf[2] = 0x00;         //zhangbing@uniscope_drv 20151013 add to clear flag "0"
+				gtp_i2c_write(ts->client, doze_buf, 3);
 				gtp_enter_doze(ts);
 			}
 		}
@@ -726,7 +740,7 @@ static s8 gtp_enter_doze(struct goodix_ts_data *ts)
 		(u8)GTP_REG_SLEEP, 8};
 
 #if GTP_DBL_CLK_WAKEUP
-	i2c_control_buf[2] = 0x09;
+	i2c_control_buf[2] = 0x08;  //zhangbing@uniscope_drv modify value from 0x09 to 0x08
 #endif
 	gtp_irq_disable(ts);
 
@@ -856,8 +870,12 @@ err_retry:
 		if (DOZE_WAKEUP != doze_status)
 			gtp_reset_guitar(ts, 10);
 		else
-			/* wakeup by slide */
-			doze_status = DOZE_DISABLED;
+			{/* wakeup by slide */
+				doze_status = DOZE_DISABLED;
+				gtp_irq_disable(ts);   //zhangbing@uniscope_drv 20151013 add
+				gtp_reset_guitar(ts, 10);
+				gtp_irq_enable(ts);
+			}
 #else
 		if (chip_gt9xxs == 1) {
 			gtp_reset_guitar(ts, 10);
@@ -974,12 +992,12 @@ static int gtp_init_panel(struct goodix_ts_data *ts)
 				"Ic fixed config with config version(%d, 0x%02X)",
 				opr_buf[0], opr_buf[0]);
 			ts->fixed_cfg = 1;
-		} 
-	} else {  
-		dev_err(&client->dev, 
+		}
+	} else {
+		dev_err(&client->dev,
 			"Failed to get ic config version!No config sent!");
 		return -EINVAL;
-	} 
+	}
 
 	config_data = ts->pdata->config_data[sensor_id];
 	ts->config_data = ts->pdata->config_data[sensor_id];
@@ -1055,13 +1073,13 @@ static int unisope_init_panel(struct goodix_ts_data *ts)
 			&config_data[0], 1);
 	if(ret < 0)
 	dev_err(&client->dev, "read X_max Low 8 Bit failed");
-	
+
 	/*read X_max High 8 Bit*/
 	ret = gtp_i2c_read_dbl_check(ts->client, (GTP_REG_CONFIG_DATA+2),
 			&config_data[1], 1);
 	if(ret < 0)
 	dev_err(&client->dev, "read X_max High 8 Bit failed");
-	
+
       ts->abs_x_max = (config_data[1] << 8) | config_data[0];
 
 	dev_err(&client->dev, "read X_max  %d",ts->abs_x_max);
@@ -1083,13 +1101,60 @@ static int unisope_init_panel(struct goodix_ts_data *ts)
 			&config_data[4], 1);
 	if(ret < 0)
 	dev_err(&client->dev, "INT Type read failed");
-	
+
 	ts->int_trigger_type = (config_data[4]) & 0x03;
 	dev_err(&client->dev, "INT Type read value %d",ts->int_trigger_type);
 
 	return ret;
 }
 #endif //
+
+/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) begin*/
+#ifdef UNISCOPE_DRIVER_QC8909
+static int goodix_ts_pinctrl_init(struct goodix_ts_data *goodix_data)
+{
+	int retval;
+
+	goodix_data->ts_pinctrl = devm_pinctrl_get(&(goodix_data->client->dev));
+	if(IS_ERR_OR_NULL(goodix_data->ts_pinctrl))
+		{
+			retval = PTR_ERR(goodix_data->ts_pinctrl);
+			dev_dbg(&goodix_data->client->dev,"Target does not use pinctrl %d\n",retval);
+			goto err_pinctrl_get;
+		}
+	goodix_data->pinctrl_state_active = pinctrl_lookup_state(goodix_data->ts_pinctrl,PINCTRL_STATE_ACTIVE);
+
+	if(IS_ERR_OR_NULL(goodix_data->pinctrl_state_active))
+		{
+			retval = PTR_ERR(goodix_data->pinctrl_state_active);
+			dev_err(&goodix_data->client->dev,"Can not lookup %s pinstate %d\n",PINCTRL_STATE_ACTIVE,retval);
+			goto err_pinctrl_lookup;
+		}
+	goodix_data->pinctrl_state_suspend = pinctrl_lookup_state(goodix_data->ts_pinctrl,PINCTRL_STATE_SUSPEND);
+
+	if(IS_ERR_OR_NULL(goodix_data->pinctrl_state_suspend))
+		{
+			retval = PTR_ERR(goodix_data->pinctrl_state_suspend);
+			dev_err(&goodix_data->client->dev,"Can not lookup %s pinstate %d\n",PINCTRL_STATE_SUSPEND,retval);
+			goto err_pinctrl_lookup;
+		}
+	goodix_data->pinctrl_state_release = pinctrl_lookup_state(goodix_data->ts_pinctrl,PINCTRL_STATE_RELEASE);
+
+	if(IS_ERR_OR_NULL(goodix_data->pinctrl_state_release))
+		{
+			retval = PTR_ERR(goodix_data->pinctrl_state_release);
+			dev_dbg(&goodix_data->client->dev,"Can not lookup %s pinstate %d\n",PINCTRL_STATE_RELEASE,retval);
+		}
+	return 0;
+
+err_pinctrl_lookup:
+	devm_pinctrl_put(goodix_data->ts_pinctrl);
+err_pinctrl_get:
+	goodix_data->ts_pinctrl = NULL;
+	return retval;
+}
+#endif
+/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) end*/
 
 
 /*******************************************************
@@ -1409,9 +1474,9 @@ static int goodix_power_on(struct goodix_ts_data *ts)
 			dev_err(&ts->client->dev,
 				"Regulator avdd enable failed ret=%d\n", ret);
 			goto err_enable_avdd;
-		} 
+		}
 	}
-#if 0 //byj  
+#if 0 //byj
 	if (!IS_ERR(ts->vdd)) {
 		ret = regulator_set_voltage(ts->vdd, GOODIX_VTG_MIN_UV,
 					   GOODIX_VTG_MAX_UV);
@@ -1461,10 +1526,10 @@ static int goodix_power_on(struct goodix_ts_data *ts)
 			goto err_enable_vcc_i2c;
 			}
 	}
-#endif 
+#endif
 	ts->power_on = true;
 	return 0;
-#if 0 //byj 
+#if 0 //byj
 err_enable_vcc_i2c:
 err_set_opt_vcc_i2c:
 	if (!IS_ERR(ts->vcc_i2c))
@@ -1476,7 +1541,7 @@ err_enable_vdd:
 err_set_opt_vdd:
 	if (!IS_ERR(ts->vdd))
 		regulator_set_voltage(ts->vdd, 0, GOODIX_VTG_MAX_UV);
- 		
+
 err_set_vtg_vdd:
 	if (!IS_ERR(ts->avdd))
 		regulator_disable(ts->avdd);
@@ -1502,7 +1567,7 @@ static int goodix_power_off(struct goodix_ts_data *ts)
 				"Device already power off\n");
 		return 0;
 	}
-#if 0 //byj 
+#if 0 //byj
 	if (!IS_ERR(ts->vcc_i2c)) {
 		ret = regulator_set_voltage(ts->vcc_i2c, 0,
 			GOODIX_I2C_VTG_MAX_UV);
@@ -1527,7 +1592,7 @@ static int goodix_power_off(struct goodix_ts_data *ts)
 			dev_err(&ts->client->dev,
 				"Regulator vdd disable failed ret=%d\n", ret);
 	}
-#endif 
+#endif
 	if (!IS_ERR(ts->avdd)) {
 		ret = regulator_disable(ts->avdd);
 		if (ret)
@@ -1679,11 +1744,11 @@ static int goodix_ts_get_dt_coords(struct device *dev, char *name,
 		u32 disp_y=0;
 		get_mdss_dsi_panel_resolution(&disp_x,&disp_y);
 		pdata->x_max = disp_x;
-		pdata->y_max = disp_y;	
+		pdata->y_max = disp_y;
 		//input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->x_min,
 		//	     pdata->x_max, 0, 0);
 		//input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min,
-		//	     pdata->y_max, 0, 0);	
+		//	     pdata->y_max, 0, 0);
 	}
 #endif
 	/* Added by JZZ(zhizhang)@uniscope_drv 20140918 end */
@@ -1805,12 +1870,15 @@ static int goodix_ts_probe(struct i2c_client *client,
 	struct goodix_ts_data *ts;
 	u16 version_info;
 	int ret;
+#ifdef UNISCOPE_DRIVER_QC8909
+	int err;   //zhangbing@uniscope_drv 20151013 add
+#endif
 
-#if 0 
+#if 0
 	///byj
 	int err;
 	dev_err(&client->dev,"yyy 1111111111111\n");
-				
+
 	if (gpio_is_valid(56)) {
 		err = gpio_request(56, "goodix_ts__reset_gpio_yyy");
 		if (err) {
@@ -1826,10 +1894,10 @@ static int goodix_ts_probe(struct i2c_client *client,
 		}
 		dev_err(&client->dev,"yyy 3333333333333333\n");
 	}
-#endif 
-	
+#endif
+
 	dev_err(&client->dev,"yyy 22222222222222\n");
-	
+
 	dev_err(&client->dev, "GTP I2C Address: 0x%02x\n", client->addr);
 	if (client->dev.of_node) {
 		pdata = devm_kzalloc(&client->dev,
@@ -1889,6 +1957,17 @@ static int goodix_ts_probe(struct i2c_client *client,
 		dev_err(&client->dev, "GTP power on failed\n");
 		goto exit_deinit_power;
 	}
+	/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) begin*/
+#ifdef UNISCOPE_DRIVER_QC8909
+	err=goodix_ts_pinctrl_init(ts);
+	if(!err && ts->ts_pinctrl)
+		{
+			ret = pinctrl_select_state(ts->ts_pinctrl,ts->pinctrl_state_active);
+			if(ret<0)
+				dev_err(&client->dev,"Failed to select %s pin to active state %d\n",PINCTRL_STATE_ACTIVE,ret);
+		}
+#endif
+	/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) end*/
 
 	ret = gtp_request_io_port(ts);
 	if (ret) {
@@ -1914,7 +1993,7 @@ static int goodix_ts_probe(struct i2c_client *client,
 		dev_err(&client->dev,
 			"GTP Create firmware update thread error.\n");
 		goto exit_power_off;
-	} 
+	}
 #endif
 
 #ifndef FEATURE_QRD8X26_UNI_DRV

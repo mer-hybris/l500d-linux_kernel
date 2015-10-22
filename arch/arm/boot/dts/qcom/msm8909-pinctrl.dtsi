@@ -1229,7 +1229,8 @@
 
 			ts_int_active: ts_int_active {
 				drive-strength = <8>;
-				bias-pull-up;
+				//bias-pull-up;
+				bias-disable;    /*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal)*/
 			};
 		};
 
@@ -1241,7 +1242,8 @@
 
 			ts_int_suspend: ts_int_suspend {
 				drive-strength = <2>;
-				bias-pull-down;
+				//bias-pull-down;
+				bias-disable;   /*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal)*/
 			};
 		};
 
