@@ -176,6 +176,11 @@
 			reset-gpios = <&msm_gpio 12 0x00>;
 			interrupt-gpios = <&msm_gpio 13 0x00>;
 			avdd-supply =<&tp_power>;
+			/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) begin*/
+			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
+			pinctrl-0 = <&ts_int_active &ts_reset_active>;
+			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+			/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) end*/
 			goodix,panel-coords = <0 0 480 854>;
 			goodix,display-coords = <0 0 480 854>;
 			goodix,button-map= <158 102 139>;
