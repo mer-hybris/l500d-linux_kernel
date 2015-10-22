@@ -939,7 +939,7 @@
 		qcom,rpull-up-kohm = <0>;
 		qcom,vref-batt-therm = <1800000>;
 
-		#include "batterydata-uni-L500C-4v35-2100mah.dtsi"
+		#include "batterydata-uni-L500D-4v35-2500mah.dtsi"
 	};
 };
 
