@@ -401,6 +401,7 @@
 			gpios = <&msm_gpio 36 0>;
 			label = "button-backlight";
 			linux,default-trigger = "none";
+			retain-state-suspended;
 		};
 	};
 	/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control end */
