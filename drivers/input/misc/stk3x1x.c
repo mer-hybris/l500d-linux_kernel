@@ -97,7 +97,6 @@
 #define STK_RSRVD_REG			0x3F
 #define STK_SW_RESET_REG		0x80
 
-
 /* Define state reg */
 #define STK_STATE_EN_IRS_SHIFT		7
 #define STK_STATE_EN_AK_SHIFT		6
@@ -315,8 +314,7 @@ inline uint32_t stk_alscode2lux(struct stk3x1x_data *ps_data, uint32_t alscode)
 	alscode += ((alscode<<7) + (alscode<<3) + (alscode>>1));
 	alscode <<= 3;
 	alscode /= ps_data->als_transmittance;
-	//kangyan@uni_drv 20150630 add lux value
-	return alscode*30;
+	return alscode;
 }
 
 inline uint32_t stk_lux2alscode(struct stk3x1x_data *ps_data, uint32_t lux)
