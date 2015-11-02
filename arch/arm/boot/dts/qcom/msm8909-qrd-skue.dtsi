@@ -322,7 +322,7 @@
 			vdd-supply = <&pm8909_l17>;
 			vio-supply = <&pm8909_l6>;
 			stk,irq-gpio = <&msm_gpio 94 0x2002>;
-			stk,transmittance = <8000>;
+			stk,transmittance = <340>;
 			stk,state-reg = <0x00>;
 			stk,psctrl-reg = <0x31>;
 			stk,alsctrl-reg = <0x39>;
