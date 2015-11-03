@@ -56,8 +56,6 @@
 #define _ZONE ZONE_NORMAL
 #endif
 
-#define MAX_SWAP_COMMIT 100
-
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
@@ -134,12 +132,14 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	int other_free, other_file;
 	unsigned long pressure = action;
 	int array_size = ARRAY_SIZE(lowmem_adj);
+	struct sysinfo si;
 
 	if (!enable_adaptive_lmk)
 		return 0;
 
 	if (pressure >= 95) {
-		other_file = global_page_state(NR_FILE_PAGES) -
+		si_swapinfo(&si);
+		other_file = global_page_state(NR_FILE_PAGES) + si.freeswap -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages();
 		other_free = global_page_state(NR_FREE_PAGES);
@@ -152,7 +152,8 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		if (lowmem_minfree_size < array_size)
 			array_size = lowmem_minfree_size;
 
-		other_file = global_page_state(NR_FILE_PAGES) -
+		si_swapinfo(&si);
+		other_file = global_page_state(NR_FILE_PAGES) + si.freeswap -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages();
 
@@ -372,35 +373,25 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
-        int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
-        int other_file;
+	int other_free;
+	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
-        struct sysinfo si;
-        int relative_freeswap;
+	struct sysinfo si;
 
-        if (sc->nr_to_scan > 0) {
-                if (mutex_lock_interruptible(&scan_mutex) < 0)
-                        return 0;
-        }
+	if (nr_to_scan > 0) {
+		if (mutex_lock_interruptible(&scan_mutex) < 0)
+			return 0;
+	}
 
-        if (global_page_state(NR_SHMEM) + total_swapcache_pages() <
-                global_page_state(NR_FILE_PAGES))
-                other_file = global_page_state(NR_FILE_PAGES) -
-                                                global_page_state(NR_SHMEM) -
-                                                total_swapcache_pages();
-        else
-                other_file = 0;
+	other_free = global_page_state(NR_FREE_PAGES);
 
-        si_swapinfo(&si);
+	si_swapinfo(&si);
 
-        relative_freeswap = si.freeswap - (si.totalswap * (100-MAX_SWAP_COMMIT))/100 > 0
-                                ? si.freeswap - (si.totalswap * (100-MAX_SWAP_COMMIT))/100 : 0;
+	other_file = global_page_state(NR_FILE_PAGES) + si.freeswap -
+				global_page_state(NR_SHMEM) -
+				total_swapcache_pages();
 
-        other_file = global_page_state(NR_FILE_PAGES) + relative_freeswap -
-                                global_page_state(NR_SHMEM) -
-                                total_swapcache_pages();
-
-        tune_lmk_param(&other_free, &other_file, sc);
+	tune_lmk_param(&other_free, &other_file, sc);
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
