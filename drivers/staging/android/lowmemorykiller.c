@@ -373,6 +373,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_free;
 	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
+	struct sysinfo si;
 
 	if (nr_to_scan > 0) {
 		if (mutex_lock_interruptible(&scan_mutex) < 0)
@@ -381,13 +382,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 	other_free = global_page_state(NR_FREE_PAGES);
 
-	if (global_page_state(NR_SHMEM) + total_swapcache_pages() <
-		global_page_state(NR_FILE_PAGES))
-		other_file = global_page_state(NR_FILE_PAGES) -
-						global_page_state(NR_SHMEM) -
-						total_swapcache_pages();
-	else
-		other_file = 0;
+	si_swapinfo(&si);
+
+	other_file = global_page_state(NR_FILE_PAGES) + si.freeswap -
+				global_page_state(NR_SHMEM) -
+				total_swapcache_pages();
 
 	tune_lmk_param(&other_free, &other_file, sc);
 
