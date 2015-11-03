@@ -132,12 +132,14 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	int other_free, other_file;
 	unsigned long pressure = action;
 	int array_size = ARRAY_SIZE(lowmem_adj);
+	struct sysinfo si;
 
 	if (!enable_adaptive_lmk)
 		return 0;
 
 	if (pressure >= 95) {
-		other_file = global_page_state(NR_FILE_PAGES) -
+		si_swapinfo(&si);
+		other_file = global_page_state(NR_FILE_PAGES) + si.freeswap -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages();
 		other_free = global_page_state(NR_FREE_PAGES);
@@ -150,7 +152,8 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		if (lowmem_minfree_size < array_size)
 			array_size = lowmem_minfree_size;
 
-		other_file = global_page_state(NR_FILE_PAGES) -
+		si_swapinfo(&si);
+		other_file = global_page_state(NR_FILE_PAGES) + si.freeswap -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages();
 
