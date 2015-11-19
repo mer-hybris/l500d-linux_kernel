@@ -2189,8 +2189,15 @@ static void goodix_ts_suspend(struct goodix_ts_data *ts)
 	int ret = -1;
 
 	mutex_lock(&ts->lock);
-#if GTP_ESD_PROTECT
+#if defined(CONFIG_FB)
+	if (ts->gtp_is_suspend) {
+		dev_err(&ts->client->dev, "GTP already suspended.\n");
+		mutex_unlock(&ts->lock);
+		return;
+	}
+#endif
 	ts->gtp_is_suspend = 1;
+#if GTP_ESD_PROTECT
 	gtp_esd_switch(ts->client, SWITCH_OFF);
 #endif
 
@@ -2232,6 +2239,14 @@ static void goodix_ts_resume(struct goodix_ts_data *ts)
 	//int i;
 
 	mutex_lock(&ts->lock);
+#if defined(CONFIG_FB)
+	if (!ts->gtp_is_suspend) {
+		dev_err(&ts->client->dev, "GTP already resumed.\n");
+		mutex_unlock(&ts->lock);
+		return;
+	}
+#endif
+
 	ret = gtp_wakeup_sleep(ts);
 
 #if GTP_SLIDE_WAKEUP
@@ -2255,8 +2270,8 @@ static void goodix_ts_resume(struct goodix_ts_data *ts)
 		hrtimer_start(&ts->timer,
 			ktime_set(1, 0), HRTIMER_MODE_REL);
 
-#if GTP_ESD_PROTECT
 	ts->gtp_is_suspend = 0;
+#if GTP_ESD_PROTECT
 	gtp_esd_switch(ts->client, SWITCH_ON);
 #endif
 	mutex_unlock(&ts->lock);
