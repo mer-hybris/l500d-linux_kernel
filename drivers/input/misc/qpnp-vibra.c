@@ -393,7 +393,7 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 
 	dev_set_drvdata(&spmi->dev, vib);
 
-	dev_info(&spmi->dev, "Probe success: vtg_level = %u, mode = %s, "
+	dev_info(&spmi->dev, "Probe success: vtg_level = %u, mode = %u, "
 			"pwm_channel = %u, period_us = %u, duty_us = %u, "
 			"active_low = %u\n",
 			vib->vtg_level, vib->mode, vib->pwm_info.pwm_channel,
