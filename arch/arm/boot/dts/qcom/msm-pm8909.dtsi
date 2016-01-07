@@ -30,7 +30,9 @@
 			interrupts = <0x0 0x8 0x0>,
 				     <0x0 0x8 0x1>;
 			interrupt-names = "kpdpwr", "resin";
-			qcom,pon-dbc-delay = <15625>;
+			/* Increase debounce from 15625 to 31250 to remove
+			   duplicate key presses on bad HW */
+			qcom,pon-dbc-delay = <31250>;
 			qcom,system-reset;
 			qcom,clear-warm-reset;
 /*liguowei@uniscope 20140823 support long pressing powerkey 5s to restart system begin*/
