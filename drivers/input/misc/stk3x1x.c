@@ -59,14 +59,14 @@
 /* Driver Settings */
 #define CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD
 #ifdef CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD
-#define STK_ALS_CHANGE_THD	20 
-/* The threshold to trigger ALS interrupt, unit: lux */
+/* The threshold to trigger ALS interrupt: Thousandths of current als code */
+#define STK_ALS_CHANGE_THD		50
 #endif	/* #ifdef CONFIG_STK_PS_ALS_USE_CHANGE_THRESHOLD */
 #define STK_INT_PS_MODE			1	/* 1, 2, or 3	*/
 /* #define STK_POLL_PS */
 
 //kangyan@uni_drv modify timer way,it is interrupt way before
-#define STK_POLL_ALS 
+/* #define STK_POLL_ALS */
 /* ALS interrupt is valid only when STK_PS_INT_MODE = 1	or 4*/
 
 /* Define Register Map */
@@ -359,9 +359,20 @@ static uint32_t stk_get_lux_interval_index(uint16_t alscode)
 #else
 inline void stk_als_set_new_thd(struct stk3x1x_data *ps_data, uint16_t alscode)
 {
-	int32_t high_thd, low_thd;
-	high_thd = alscode + stk_lux2alscode(ps_data, STK_ALS_CHANGE_THD);
-	low_thd = alscode - stk_lux2alscode(ps_data, STK_ALS_CHANGE_THD);
+	/* Normally, interrupt when sensor reading changes by:
+	 *   max(fraction of current value, 2 steps)
+	 *
+	 * Exception: Interrupt on single steps down when the
+	 * sensor is already reporting close to zero values.
+	 */
+	int32_t high_thd, low_thd, delta;
+	if ((delta = alscode * STK_ALS_CHANGE_THD / 1000) < 1)
+		delta = 1;
+	high_thd = alscode + delta;
+	if (alscode < 4)
+		low_thd = alscode;
+	else
+		low_thd = alscode - delta;
 	if (high_thd >= (1<<16))
 		high_thd = (1<<16) - 1;
 	if (low_thd < 0)

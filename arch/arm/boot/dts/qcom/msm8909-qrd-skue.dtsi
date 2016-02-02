@@ -327,7 +327,7 @@
 			vdd-supply = <&pm8909_l17>;
 			vio-supply = <&pm8909_l6>;
 			stk,irq-gpio = <&msm_gpio 94 0x2002>;
-			stk,transmittance = <340>;
+			stk,transmittance = <4092>;
 			stk,state-reg = <0x00>;
 			stk,psctrl-reg = <0x31>;
 			stk,alsctrl-reg = <0x39>;
@@ -335,7 +335,6 @@
 			stk,wait-reg = <0x09>;
 			stk,ps-thdh = <100>;
 			stk,ps-thdl = <50>;
-			stk,use-fir;
 		};
 		//liguowei@uniscope 20140910 add stk3x1x end	
 		/* Added by JZZ(zhizhang)@uniscope_drv for sensor device tree 20150210 begin */
