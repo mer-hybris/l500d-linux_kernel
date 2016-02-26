@@ -27,6 +27,7 @@
 #include <linux/input.h>
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
+#include <linux/wakelock.h>
 #include "../../staging/android/timed_output.h"
 
 #define QPNP_VIB_VTG_CTL(base)		(base + 0x41)
@@ -71,7 +72,7 @@ struct qpnp_vib {
 	u16 base;
 	int speed;
 	int vtg_level;
-	struct mutex lock;
+	struct wake_lock wake_lock;
 };
 
 static int qpnp_vib_read_u8(struct qpnp_vib *vib, u8 *data, u16 reg)
@@ -150,7 +151,7 @@ static int qpnp_vibrator_config(struct qpnp_vib *vib)
 
 static int qpnp_vib_set(struct qpnp_vib *vib, int on)
 {
-	int rc;
+	int rc = 0;
 	u8 vol, en;
 
 	if (on) {
@@ -163,7 +164,7 @@ static int qpnp_vib_set(struct qpnp_vib *vib, int on)
 			if (rc) {
 				dev_err(&vib->spmi->dev,
 					"Couldn't set voltage level\n");
-				return rc;
+				goto failure;
 			}
 			vib->vtg_level = vol;
 
@@ -174,7 +175,7 @@ static int qpnp_vib_set(struct qpnp_vib *vib, int on)
 			if (rc < 0) {
 				dev_err(&vib->spmi->dev,
 					"Couldn't set enable bit\n");
-				return rc;
+				goto failure;
 			}
 			vib->reg_en_ctl = en;
 		}
@@ -187,12 +188,16 @@ static int qpnp_vib_set(struct qpnp_vib *vib, int on)
 			rc = qpnp_vib_write_u8(vib, &en,
 					QPNP_VIB_EN_CTL(vib->base));
 			if (rc < 0)
-				return rc;
+				goto failure;
 			vib->reg_en_ctl = en;
 		}
 	}
 
-	return 0;
+failure:
+	/* Allow suspend when vibra is off / in case of errors */
+	if( !on || rc )
+		wake_unlock(&vib->wake_lock);
+	return rc;
 }
 
 static int qpnp_vib_play(struct input_dev *dev, void *data,
@@ -200,13 +205,15 @@ static int qpnp_vib_play(struct input_dev *dev, void *data,
 {
 	struct qpnp_vib *vib = input_get_drvdata(dev);
 
-	mutex_lock(&vib->lock);
+	int speed = effect->u.rumble.strong_magnitude >> 8;
+	if (!speed)
+		speed = effect->u.rumble.weak_magnitude >> 9;
 
-	vib->speed = effect->u.rumble.strong_magnitude >> 8;
-	if (!vib->speed)
-		vib->speed = effect->u.rumble.weak_magnitude >> 9;
+	/* Block suspend until qpnp_vib_set(0) gets called
+	 * either from qpnp_vib_work() or qpnp_vib_stop() */
+	wake_lock(&vib->wake_lock);
 
-	mutex_unlock(&vib->lock);
+	vib->speed = speed;
 	schedule_work(&vib->work);
 
 	return 0;
@@ -217,20 +224,19 @@ static void qpnp_vib_work(struct work_struct *work)
 	struct qpnp_vib *vib = container_of(work, struct qpnp_vib,
 					 work);
 
-	mutex_lock(&vib->lock);
 	/*
 	 * qpnp vibrator supports voltage ranges from 1.2 to 3.1V, so
 	 * scale the level to fit into these ranges.
 	 */
-	if (vib->speed) {
-		vib->vtg_level = ((QPNP_VIB_MAX_LEVELS * vib->speed) /
+	int speed = vib->speed;
+	if (speed) {
+		vib->vtg_level = ((QPNP_VIB_MAX_LEVELS * speed) /
 				MAX_FF_SPEED) + QPNP_VIB_MIN_LEVEL;
 	} else {
 		vib->vtg_level = QPNP_VIB_MIN_LEVEL;
 	}
 
-	qpnp_vib_set(vib, vib->speed);
-	mutex_unlock(&vib->lock);
+	qpnp_vib_set(vib, speed);
 }
 
 static int qpnp_vib_stop(struct qpnp_vib *vib)
@@ -247,22 +253,14 @@ static void qpnp_vib_close(struct input_dev *dev)
 }
 
 #ifdef CONFIG_PM
-static int qpnp_vibrator_prepare(struct device *dev)
+static int qpnp_vibrator_suspend(struct device *dev)
 {
 	struct qpnp_vib *vib = dev_get_drvdata(dev);
-	int ret = 0;
 
-	mutex_lock(&vib->lock);
-	if (vib->speed)
-		ret = -EBUSY;
-	mutex_unlock(&vib->lock);
-
-	return ret;
+	return qpnp_vib_stop(vib);
 }
 
-const struct dev_pm_ops qpnp_vibrator_pm_ops = {
-	.prepare = qpnp_vibrator_prepare,
-};
+static SIMPLE_DEV_PM_OPS(qpnp_vibrator_pm_ops, qpnp_vibrator_suspend, NULL);
 #endif
 
 static int qpnp_vib_parse_dt(struct qpnp_vib *vib)
@@ -376,7 +374,7 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 		goto probe_err1;
 	}
 
-	mutex_init(&vib->lock);
+	wake_lock_init(&vib->wake_lock, WAKE_LOCK_SUSPEND, "qpnp_vibra");
 	INIT_WORK(&vib->work, qpnp_vib_work);
 
 	input_dev->name = "qpnp_vibra_ffmemless";
@@ -414,7 +412,7 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 
 probe_err2:
 	input_free_device(input_dev);
-	mutex_destroy(&vib->lock);
+	wake_lock_destroy(&vib->wake_lock);
 probe_err1:
 	kfree(vib);
 	return rc;
@@ -426,7 +424,7 @@ static int qpnp_vibrator_remove(struct spmi_device *spmi)
 
 	cancel_work_sync(&vib->work);
 	input_unregister_device(vib->input_dev);
-	mutex_destroy(&vib->lock);
+	wake_lock_destroy(&vib->wake_lock);
 	kfree(vib);
 
 	return 0;
