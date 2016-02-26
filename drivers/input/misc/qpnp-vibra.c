@@ -217,7 +217,6 @@ static void qpnp_vib_work(struct work_struct *work)
 	struct qpnp_vib *vib = container_of(work, struct qpnp_vib,
 					 work);
 
-	mutex_lock(&vib->lock);
 	/*
 	 * qpnp vibrator supports voltage ranges from 1.2 to 3.1V, so
 	 * scale the level to fit into these ranges.
@@ -230,7 +229,6 @@ static void qpnp_vib_work(struct work_struct *work)
 	}
 
 	qpnp_vib_set(vib, vib->speed);
-	mutex_unlock(&vib->lock);
 }
 
 static int qpnp_vib_stop(struct qpnp_vib *vib)
@@ -247,22 +245,14 @@ static void qpnp_vib_close(struct input_dev *dev)
 }
 
 #ifdef CONFIG_PM
-static int qpnp_vibrator_prepare(struct device *dev)
+static int qpnp_vibrator_suspend(struct device *dev)
 {
 	struct qpnp_vib *vib = dev_get_drvdata(dev);
-	int ret = 0;
 
-	mutex_lock(&vib->lock);
-	if (vib->speed)
-		ret = -EBUSY;
-	mutex_unlock(&vib->lock);
-
-	return ret;
+	return qpnp_vib_stop(vib);
 }
 
-const struct dev_pm_ops qpnp_vibrator_pm_ops = {
-	.prepare = qpnp_vibrator_prepare,
-};
+static SIMPLE_DEV_PM_OPS(qpnp_vibrator_pm_ops, qpnp_vibrator_suspend, NULL);
 #endif
 
 static int qpnp_vib_parse_dt(struct qpnp_vib *vib)
