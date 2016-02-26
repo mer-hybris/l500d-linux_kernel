@@ -71,7 +71,6 @@ struct qpnp_vib {
 	u16 base;
 	int speed;
 	int vtg_level;
-	struct mutex lock;
 };
 
 static int qpnp_vib_read_u8(struct qpnp_vib *vib, u8 *data, u16 reg)
@@ -200,13 +199,12 @@ static int qpnp_vib_play(struct input_dev *dev, void *data,
 {
 	struct qpnp_vib *vib = input_get_drvdata(dev);
 
-	mutex_lock(&vib->lock);
+	int speed = effect->u.rumble.strong_magnitude >> 8;
+	if (!speed)
+		speed = effect->u.rumble.weak_magnitude >> 9;
 
-	vib->speed = effect->u.rumble.strong_magnitude >> 8;
-	if (!vib->speed)
-		vib->speed = effect->u.rumble.weak_magnitude >> 9;
 
-	mutex_unlock(&vib->lock);
+	vib->speed = speed;
 	schedule_work(&vib->work);
 
 	return 0;
@@ -221,14 +219,15 @@ static void qpnp_vib_work(struct work_struct *work)
 	 * qpnp vibrator supports voltage ranges from 1.2 to 3.1V, so
 	 * scale the level to fit into these ranges.
 	 */
-	if (vib->speed) {
-		vib->vtg_level = ((QPNP_VIB_MAX_LEVELS * vib->speed) /
+	int speed = vib->speed;
+	if (speed) {
+		vib->vtg_level = ((QPNP_VIB_MAX_LEVELS * speed) /
 				MAX_FF_SPEED) + QPNP_VIB_MIN_LEVEL;
 	} else {
 		vib->vtg_level = QPNP_VIB_MIN_LEVEL;
 	}
 
-	qpnp_vib_set(vib, vib->speed);
+	qpnp_vib_set(vib, speed);
 }
 
 static int qpnp_vib_stop(struct qpnp_vib *vib)
@@ -366,7 +365,6 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 		goto probe_err1;
 	}
 
-	mutex_init(&vib->lock);
 	INIT_WORK(&vib->work, qpnp_vib_work);
 
 	input_dev->name = "qpnp_vibra_ffmemless";
@@ -404,7 +402,6 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 
 probe_err2:
 	input_free_device(input_dev);
-	mutex_destroy(&vib->lock);
 probe_err1:
 	kfree(vib);
 	return rc;
@@ -416,7 +413,6 @@ static int qpnp_vibrator_remove(struct spmi_device *spmi)
 
 	cancel_work_sync(&vib->work);
 	input_unregister_device(vib->input_dev);
-	mutex_destroy(&vib->lock);
 	kfree(vib);
 
 	return 0;
