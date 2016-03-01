@@ -176,7 +176,7 @@ int gtp_i2c_read(struct i2c_client *client, u8 *buf, int len)
 	if (retries >= 5) {
 #if GTP_SLIDE_WAKEUP
 		/* reset chip would quit doze mode */
-		if (DOZE_ENABLED == doze_status)
+		if (DOZE_DISABLED != doze_status)
 			return ret;
 #endif
 		if (init_done)
@@ -221,7 +221,8 @@ int gtp_i2c_write(struct i2c_client *client, u8 *buf, int len)
 	}
 	if ((retries >= 5)) {
 #if GTP_SLIDE_WAKEUP
-		if (DOZE_ENABLED == doze_status)
+		/* reset chip would quit doze mode */
+		if (DOZE_DISABLED != doze_status)
 			return ret;
 #endif
 		if (init_done)
@@ -441,7 +442,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 #endif
 
 #if GTP_SLIDE_WAKEUP
-	if (DOZE_ENABLED == doze_status) {
+	if (DOZE_DISABLED != doze_status) {
 		ret = gtp_i2c_read(ts->client, doze_buf, 3);
 		if (ret > 0) {
 			if (doze_buf[2] == 0xAA) {
