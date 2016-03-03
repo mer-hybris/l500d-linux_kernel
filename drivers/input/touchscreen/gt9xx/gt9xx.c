@@ -133,6 +133,12 @@ typedef enum doze_status {          //zhangbing@uniscope_drv 20151013 modify
 }DOZE_T;
 static DOZE_T doze_status = DOZE_DISABLED;    //zhangbing@uniscope_drv 20151013 modify
 static s8 gtp_enter_doze(struct goodix_ts_data *ts);
+typedef enum {
+	GESTURE_SWIPE_FROM_LEFT  = 0,
+	GESTURE_SWIPE_FROM_RIGHT = 1,
+	GESTURE_DOUBLETAP        = 4, /* To conform with value used in
+				       * Nokia N9 kernel driver */
+} gesture_type;
 #endif
 bool init_done;
 static u8 chip_gt9xxs;  /* true if ic is gt9xxs, like gt915s */
@@ -449,11 +455,8 @@ static void goodix_ts_work_func(struct work_struct *work)
 				dev_err(&ts->client->dev,
 					"Slide(0xAA) To Light up the screen!");
 				doze_status = DOZE_WAKEUP;
-				input_report_key(
-					ts->input_dev, KEY_POWER, 1);
-				input_sync(ts->input_dev);
-				input_report_key(
-					ts->input_dev, KEY_POWER, 0);
+				input_event(ts->input_dev, EV_MSC, MSC_GESTURE,
+					    GESTURE_SWIPE_FROM_LEFT);
 				input_sync(ts->input_dev);
 				/* clear 0x814B */
 				doze_buf[2] = 0x00;
@@ -462,9 +465,8 @@ static void goodix_ts_work_func(struct work_struct *work)
 				dev_err(&ts->client->dev,
 					"Slide(0xBB) To Light up the screen!");
 				doze_status = DOZE_WAKEUP;
-				input_report_key(ts->input_dev, KEY_POWER, 1);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_POWER, 0);
+				input_event(ts->input_dev, EV_MSC, MSC_GESTURE,
+					    GESTURE_SWIPE_FROM_RIGHT);
 				input_sync(ts->input_dev);
 				/* clear 0x814B*/
 				doze_buf[2] = 0x00;
@@ -473,9 +475,8 @@ static void goodix_ts_work_func(struct work_struct *work)
 				dev_err(&ts->client->dev,
 					"double click to light up the screen!");
 				doze_status = DOZE_WAKEUP;
-				input_report_key(ts->input_dev, KEY_POWER, 1);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_POWER, 0);
+				input_event(ts->input_dev, EV_MSC, MSC_GESTURE,
+					    GESTURE_DOUBLETAP);
 				input_sync(ts->input_dev);
 				/* clear 0x814B */
 				doze_buf[2] = 0x00;
@@ -1391,7 +1392,7 @@ static int gtp_request_input_dev(struct goodix_ts_data *ts)
 #endif
 
 #if GTP_SLIDE_WAKEUP
-	input_set_capability(ts->input_dev, EV_KEY, KEY_POWER);
+	input_set_capability(ts->input_dev, EV_MSC, MSC_GESTURE);
 #endif
 
 #if GTP_WITH_PEN
