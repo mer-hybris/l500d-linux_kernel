@@ -1250,7 +1250,7 @@ static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd)
 	u32 offset;
 	int bpp;
 	struct mdss_panel_info *panel_info;
-	static bool splash_done=true;	//zhangbing@drv 20150916 initialize the splash_done value true
+	static bool splash_done;
 	struct mdss_panel_data *panel;
 
 	int rc;
@@ -1333,7 +1333,7 @@ static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd)
 	panel = mdp3_session->panel;
 	if (!splash_done || mdp3_session->esd_recovery == true) {
 		if(panel && panel->set_backlight)
-			//panel->set_backlight(panel, panel->panel_info.bl_max);  //zhangbing@unicope_drv 20151201 modify
+			panel->set_backlight(panel, panel->panel_info.bl_max);
 		splash_done = true;
 		mdp3_session->esd_recovery = false;
 	}
