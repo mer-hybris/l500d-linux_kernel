@@ -150,22 +150,6 @@
 				focaltech,ignore-id-check;
 			};
 
-	/*zhangbing@uniscope_drv 20150514 add L510 TP mstar begin*/
-		mstar@26 {
-			compatible = "mstar,msg2xxx";//mstar,msg21xx
-			reg = <0x26>;
-			interrupt-parent = <&msm_gpio>;
-			interrupts = <13 0x2>;
-			vdd-supply = <&pm8909_l17>;
-			//avdd-supply =<&tp_power>;
-			//vcc_i2c-supply = <&pm8909_l16>;//16
-			//vio-supply = <&pm8909_l6>;
-			//msg,chip-name = "MSG2142A";
-			//msg,reset-gpio = <&msm_gpio 12 0x00>;
-			//msg,irq-gpio = <&msm_gpio 13 0x00>;
-			};
-	/*zhangbing@uniscope_drv 20150514 add L510 TP mstar end*/
-
 		
 	/* JZZ(zhizhang)@uniscope_drv 20150206 add tp dtsi begin */
 		goodix@5d {

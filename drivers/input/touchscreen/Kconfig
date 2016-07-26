@@ -967,19 +967,6 @@ config TOUCHSCREEN_MSTAR21XX
          To compile this driver as a module, choose M here: the
          module will be called msg21xx_ts.
 
-#zhangbing@uni_drv 20150515 add msg2238 tp begin
-config TOUCHSCREEN_MSTAR
-	bool "MSTAR touchpanel MSG2238 series"
-	depends on I2C
-	help
-	  Say Y here if you have a MSTAR touchpanel MSG2238 touchscreen.
-	  MSG2238 controllers are multi touch controllers which can
-	  report 5 touches at a time.
-
-          If unsure, say N.
-source "drivers/input/touchscreen/mstar/Kconfig"
-#zhangbing@uni_drv 20150515 add msg2238 tp end
-
 config TOUCHSCREEN_GEN_VKEYS
        tristate "Touchscreen Virtual Keys Driver"
        help
